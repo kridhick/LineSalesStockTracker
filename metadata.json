@@ -1,0 +1,5 @@
+{
+  "name": "Inventory Flow Tracker",
+  "description": "A mobile and web application for daily product inventory tracking, featuring item and vehicle masters, stock in/out transactions, and clean daily stock reports. Designed for ease of use, modern aesthetics, and high customizability.",
+  "requestFramePermissions": []
+}
