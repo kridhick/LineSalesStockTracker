@@ -1,5 +1,13 @@
 // types.ts
 
+// New User interface for Google Sign-In
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  picture: string;
+}
+
 export interface Category {
   id: string;
   name: string;
