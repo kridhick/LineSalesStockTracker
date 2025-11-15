@@ -162,28 +162,28 @@ export const StockIn: React.FC = () => {
 
   if (items.length === 0 || vehicles.length === 0) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-lg mx-auto bg-card rounded-lg shadow-md mt-10 text-center">
-        <h2 className="text-2xl font-bold text-textPrimary mb-4">Stock In Transaction</h2>
-        <p className="text-textSecondary">You must have at least one item and one vehicle to record transactions.</p>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-lg mx-auto bg-card dark:bg-slate-800 rounded-lg shadow-md mt-10 text-center">
+        <h2 className="text-2xl font-bold text-textPrimary dark:text-slate-200 mb-4">Stock In Transaction</h2>
+        <p className="text-textSecondary dark:text-slate-400">You must have at least one item and one vehicle to record transactions.</p>
       </div>
     );
   }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <h2 className="text-2xl sm:text-3xl font-bold text-textPrimary mb-6 text-center">Stock In Transaction</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold text-textPrimary dark:text-slate-200 mb-6 text-center">Stock In Transaction</h2>
       
       <form onSubmit={handleSubmit}>
-        <div className="bg-card p-6 rounded-lg shadow-md mb-6">
-          <h3 className="text-lg font-semibold mb-4 border-b pb-2">Transaction Details</h3>
+        <div className="bg-card dark:bg-slate-800 p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-lg font-semibold mb-4 border-b pb-2 dark:border-slate-700">Transaction Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input id="date" label="Transaction Date" type="date" value={transactionDetails.date} onChange={handleDetailChange} />
             <Select id="vehicleId" label="Select Vehicle" options={vehicles.map(v => ({ value: v.id, label: v.name }))} value={transactionDetails.vehicleId} onChange={handleDetailChange} />
           </div>
         </div>
 
-        <div className="bg-card p-6 rounded-lg shadow-md mb-6">
-          <h3 className="text-lg font-semibold mb-4 border-b pb-2">Add Item to Transaction</h3>
+        <div className="bg-card dark:bg-slate-800 p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-lg font-semibold mb-4 border-b pb-2 dark:border-slate-700">Add Item to Transaction</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="md:col-span-2">
               <Select id="itemId" label="Select Item" options={items.map(i => ({ value: i.id, label: i.name }))} value={currentItem.itemId} onChange={handleCurrentItemChange} error={formErrors.itemId} />
@@ -197,25 +197,25 @@ export const StockIn: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-card p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4 border-b pb-2">Items in this Transaction</h3>
+        <div className="bg-card dark:bg-slate-800 p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold mb-4 border-b pb-2 dark:border-slate-700">Items in this Transaction</h3>
           {transactionItems.length === 0 ? (
-            <p className="text-textSecondary text-center py-4">No items have been added to this transaction yet.</p>
+            <p className="text-textSecondary dark:text-slate-400 text-center py-4">No items have been added to this transaction yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-textSecondary dark:text-slate-400 uppercase">Item Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-textSecondary dark:text-slate-400 uppercase">Quantity</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-textSecondary dark:text-slate-400 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {transactionItems.map(item => (
                     <tr key={item.itemId}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{item.itemName}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">{item.quantity}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-textPrimary dark:text-slate-300">{item.itemName}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-textPrimary dark:text-slate-300">{item.quantity}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <Button type="button" variant="danger" size="sm" onClick={() => handleRemoveItem(item.itemId)}>Remove</Button>
                       </td>
@@ -225,7 +225,7 @@ export const StockIn: React.FC = () => {
               </table>
             </div>
           )}
-          <div className="flex justify-end mt-6 border-t pt-4">
+          <div className="flex justify-end mt-6 border-t pt-4 dark:border-slate-700">
             <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting || transactionItems.length === 0}>
               Record {transactionItems.length > 0 ? `${transactionItems.length} Item(s)` : ''} Stock In
             </Button>

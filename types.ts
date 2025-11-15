@@ -1,12 +1,8 @@
 // types.ts
 
-export enum ItemCategory {
-  ELECTRONICS = 'Electronics',
-  ACCESSORIES = 'Accessories',
-  CLOTHING = 'Clothing',
-  FOOD = 'Food & Beverage',
-  INDUSTRIAL = 'Industrial Supplies',
-  GENERAL = 'General Merchandise',
+export interface Category {
+  id: string;
+  name: string;
 }
 
 export interface Item {
@@ -14,7 +10,7 @@ export interface Item {
   name: string;
   description: string;
   sku: string;
-  category: ItemCategory; // Changed from string to enum
+  category: string; // Changed from enum to string
   rate: number;
   openingStock: number;
   currentStock: number;
@@ -53,6 +49,15 @@ export interface DailyStockReportEntry {
   closingStock: number;
 }
 
+export interface InventoryValuationEntry {
+  itemId: string;
+  itemName: string;
+  category: string;
+  currentStock: number;
+  rate: number;
+  totalValue: number;
+}
+
 export interface ToastMessage {
   id: string;
   message: string;
@@ -63,6 +68,7 @@ export enum Page {
   DASHBOARD = 'DASHBOARD',
   ITEM_MASTER = 'ITEM_MASTER',
   VEHICLE_MASTER = 'VEHICLE_MASTER',
+  CATEGORY_MASTER = 'CATEGORY_MASTER',
   STOCK_IN = 'STOCK_IN',
   STOCK_OUT = 'STOCK_OUT',
   REPORTS = 'REPORTS',
@@ -81,3 +87,5 @@ export interface LowStockAlert {
   currentStock: number;
   lowStockThreshold: number;
 }
+
+export type Theme = 'light' | 'dark';

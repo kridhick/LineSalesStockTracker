@@ -24,10 +24,10 @@ export const Button: React.FC<ButtonProps> = ({
 
   switch (variant) {
     case 'primary':
-      variantStyles = 'bg-primary text-white hover:bg-blue-600 focus:ring-primary';
+      variantStyles = 'bg-primary text-white hover:bg-indigo-700 focus:ring-primary';
       break;
     case 'secondary':
-      variantStyles = 'bg-secondary text-white hover:bg-emerald-600 focus:ring-secondary';
+      variantStyles = 'bg-secondary text-white hover:bg-teal-600 focus:ring-secondary';
       break;
     case 'danger':
       variantStyles = 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500';
@@ -36,7 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
       variantStyles = 'border border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary';
       break;
     case 'ghost':
-      variantStyles = 'text-primary hover:bg-blue-50 focus:ring-primary';
+      variantStyles = 'text-primary hover:bg-indigo-50 dark:hover:bg-indigo-900/50 focus:ring-primary';
       break;
     default:
       break;

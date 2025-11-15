@@ -1,6 +1,6 @@
 // pages/ItemMaster.tsx
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import { Item, ItemCategory } from '../types';
+import { Item, Category } from '../types';
 import { dataService } from '../services/dataService';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -9,13 +9,13 @@ import { Table } from '../components/Table';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Select } from '../components/Select';
 import useToast from '../hooks/useToast';
-import { TableColumn } from '../components/Table'; // Import TableColumn
+import { TableColumn } from '../components/Table';
 
 interface ItemFormState {
   name: string;
   description: string;
   sku: string;
-  category: ItemCategory;
+  category: string;
   rate: number;
   openingStock: number;
   lowStockThreshold: number;
@@ -25,19 +25,15 @@ const initialFormState: ItemFormState = {
   name: '',
   description: '',
   sku: '',
-  category: ItemCategory.GENERAL,
+  category: '',
   rate: 0,
   openingStock: 0,
   lowStockThreshold: 0,
 };
 
-const categoryOptions = Object.values(ItemCategory).map((category) => ({
-  value: category,
-  label: category,
-}));
-
 export const ItemMaster: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,29 +42,37 @@ export const ItemMaster: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { addToast } = useToast();
 
-  const fetchItems = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedItems = await dataService.getItems();
+      const [fetchedItems, fetchedCategories] = await Promise.all([
+        dataService.getItems(),
+        dataService.getCategories()
+      ]);
       setItems(fetchedItems);
+      setCategories(fetchedCategories);
+
+      if (fetchedCategories.length > 0) {
+        initialFormState.category = fetchedCategories[0].name;
+      }
     } catch (error) {
-      console.error('Failed to fetch items:', error);
-      addToast('Failed to load items.', 'error');
+      console.error('Failed to fetch items and categories:', error);
+      addToast('Failed to load page data.', 'error');
     } finally {
       setIsLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => {
-    fetchItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const validateForm = (): boolean => {
     const errors: { [key: string]: string } = {};
     if (!form.name.trim()) errors.name = 'Item name is required.';
     if (!form.sku.trim()) errors.sku = 'SKU is required.';
     if (!form.description.trim()) errors.description = 'Description is required.';
+    if (!form.category) errors.category = 'Category is required.';
     if (form.rate <= 0) errors.rate = 'Rate must be a positive number.';
     if (form.openingStock < 0) errors.openingStock = 'Opening stock cannot be negative.';
     if (form.lowStockThreshold < 0) errors.lowStockThreshold = 'Low stock threshold cannot be negative.';
@@ -133,7 +137,7 @@ export const ItemMaster: React.FC = () => {
         await dataService.addItem(form);
         addToast('Item added successfully!', 'success');
       }
-      await fetchItems(); // Refresh items list
+      await fetchData();
       closeModal();
     } catch (error) {
       console.error('Failed to save item:', error);
@@ -148,7 +152,7 @@ export const ItemMaster: React.FC = () => {
       try {
         await dataService.deleteItem(id);
         addToast('Item deleted successfully!', 'success');
-        await fetchItems(); // Refresh items list
+        await fetchData();
       } catch (error) {
         console.error('Failed to delete item:', error);
         addToast('Failed to delete item.', 'error');
@@ -156,7 +160,8 @@ export const ItemMaster: React.FC = () => {
     }
   };
 
-  // Fix: Explicitly define the type of the columns array
+  const categoryOptions = categories.map((cat) => ({ value: cat.name, label: cat.name }));
+
   const columns: TableColumn<Item>[] = [
     { key: 'name', header: 'Item Name' },
     { key: 'sku', header: 'SKU' },
@@ -196,7 +201,7 @@ export const ItemMaster: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-textPrimary">Item Master</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-textPrimary dark:text-slate-200">Item Master</h2>
         <Button onClick={openAddModal} variant="primary" className="flex items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -275,13 +280,13 @@ export const ItemMaster: React.FC = () => {
           </div>
          
           <div className="mb-4 mt-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-textSecondary dark:text-slate-400 mb-1">
               Description
             </label>
             <textarea
               id="description"
               rows={3}
-              className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm ${formErrors.description ? 'border-red-500' : ''}`}
+              className={`mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-slate-800 dark:border-slate-600 dark:placeholder-slate-400 dark:text-white ${formErrors.description ? 'border-red-500' : ''}`}
               value={form.description}
               onChange={handleInputChange}
               placeholder="Detailed description of the item"

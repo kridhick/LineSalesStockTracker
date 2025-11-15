@@ -1,12 +1,13 @@
 // services/dataService.ts
 
-import { Item, Vehicle, Transaction, TransactionType, DailyStockReportEntry, ItemCategory, LowStockAlert } from '../types';
+import { Item, Vehicle, Transaction, TransactionType, DailyStockReportEntry, Category, LowStockAlert, InventoryValuationEntry } from '../types';
 import { formatDate, parseDate, getPreviousDay } from '../utils/dateUtils';
 
 interface DataStore {
   items: Map<string, Item>;
   vehicles: Map<string, Vehicle>;
   transactions: Transaction[];
+  categories: Map<string, Category>;
 }
 
 const STORAGE_KEY = 'inventoryFlowTrackerData';
@@ -26,12 +27,14 @@ class DataService {
         items: new Map(parsedData.items),
         vehicles: new Map(parsedData.vehicles),
         transactions: parsedData.transactions,
+        categories: new Map(parsedData.categories),
       };
     }
     return {
       items: new Map(),
       vehicles: new Map(),
       transactions: [],
+      categories: new Map(),
     };
   }
 
@@ -40,6 +43,7 @@ class DataService {
       items: Array.from(this.dataStore.items.entries()),
       vehicles: Array.from(this.dataStore.vehicles.entries()),
       transactions: this.dataStore.transactions,
+      categories: Array.from(this.dataStore.categories.entries()),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
   }
@@ -71,7 +75,6 @@ class DataService {
       const originalOpeningStock = existingItem.openingStock;
       const updatedItem = { ...existingItem, ...updatedFields };
   
-      // If openingStock has changed, recalculate currentStock based on the difference
       if (updatedFields.openingStock !== undefined && updatedFields.openingStock !== originalOpeningStock) {
           const openingStockDifference = updatedFields.openingStock - originalOpeningStock;
           updatedItem.currentStock = existingItem.currentStock + openingStockDifference;
@@ -87,7 +90,6 @@ class DataService {
   async deleteItem(id: string): Promise<boolean> {
     const deleted = this.dataStore.items.delete(id);
     if (deleted) {
-      // Also remove any transactions related to this item for data consistency (optional, but good practice for mock)
       this.dataStore.transactions = this.dataStore.transactions.filter(t => t.itemId !== id);
       this.saveData();
     }
@@ -98,11 +100,7 @@ class DataService {
   async getVehicles(): Promise<Vehicle[]> {
     return Array.from(this.dataStore.vehicles.values());
   }
-
-  async getVehicle(id: string): Promise<Vehicle | undefined> {
-    return this.dataStore.vehicles.get(id);
-  }
-
+  
   async addVehicle(vehicle: Omit<Vehicle, 'id'>): Promise<Vehicle> {
     const newVehicle: Vehicle = { id: this.generateId(), ...vehicle };
     this.dataStore.vehicles.set(newVehicle.id, newVehicle);
@@ -124,8 +122,72 @@ class DataService {
   async deleteVehicle(id: string): Promise<boolean> {
     const deleted = this.dataStore.vehicles.delete(id);
     if (deleted) {
-      // Remove transactions related to this vehicle
       this.dataStore.transactions = this.dataStore.transactions.filter(t => t.vehicleId !== id);
+      this.saveData();
+    }
+    return deleted;
+  }
+
+  // Category Master CRUD
+  async getCategories(): Promise<Category[]> {
+    return Array.from(this.dataStore.categories.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async addCategory(category: Omit<Category, 'id'>): Promise<Category> {
+    const existing = Array.from(this.dataStore.categories.values()).find(c => c.name.toLowerCase() === category.name.toLowerCase());
+    if (existing) {
+      throw new Error('Category with this name already exists.');
+    }
+    const newCategory: Category = { id: this.generateId(), ...category };
+    this.dataStore.categories.set(newCategory.id, newCategory);
+    this.saveData();
+    return newCategory;
+  }
+
+  async updateCategory(id: string, updatedFields: Partial<Category>): Promise<Category | null> {
+    const existingCategory = this.dataStore.categories.get(id);
+    if (existingCategory) {
+      const oldName = existingCategory.name;
+      const updatedCategory = { ...existingCategory, ...updatedFields };
+      
+      if (updatedFields.name && updatedFields.name !== oldName) {
+        this.dataStore.items.forEach((item, itemId) => {
+          if (item.category === oldName) {
+            item.category = updatedFields.name!;
+            this.dataStore.items.set(itemId, item);
+          }
+        });
+      }
+      
+      this.dataStore.categories.set(id, updatedCategory);
+      this.saveData();
+      return updatedCategory;
+    }
+    return null;
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    const categoryToDelete = this.dataStore.categories.get(id);
+    if (!categoryToDelete) return false;
+
+    if (categoryToDelete.name === 'General Merchandise') {
+      throw new Error('Cannot delete the default category.');
+    }
+
+    let generalCategory = Array.from(this.dataStore.categories.values()).find(c => c.name === 'General Merchandise');
+    if (!generalCategory) {
+      generalCategory = await this.addCategory({ name: 'General Merchandise' });
+    }
+
+    this.dataStore.items.forEach((item, itemId) => {
+      if (item.category === categoryToDelete.name) {
+        item.category = generalCategory!.name;
+        this.dataStore.items.set(itemId, item);
+      }
+    });
+
+    const deleted = this.dataStore.categories.delete(id);
+    if (deleted) {
       this.saveData();
     }
     return deleted;
@@ -141,17 +203,16 @@ class DataService {
 
     const newTransaction: Transaction = { id: this.generateId(), ...transaction };
 
-    // Update current stock directly for simplicity
     if (newTransaction.type === TransactionType.STOCK_IN) {
       item.currentStock += newTransaction.quantity;
-    } else { // STOCK_OUT
+    } else {
       if (item.currentStock < newTransaction.quantity) {
         console.error('Insufficient stock for transaction:', transaction.itemId);
         return null;
       }
       item.currentStock -= newTransaction.quantity;
     }
-    this.dataStore.items.set(item.id, { ...item }); // Ensure React state updates if item object reference changes
+    this.dataStore.items.set(item.id, { ...item });
 
     this.dataStore.transactions.push(newTransaction);
     this.dataStore.transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -173,11 +234,8 @@ class DataService {
     const yesterdayFormatted = formatDate(yesterday);
 
     const allItems = await this.getItems();
-    const itemsMap = new Map(allItems.map(item => [item.id, item]));
-
     const dailyReport: DailyStockReportEntry[] = [];
 
-    // Calculate opening stock for the report date (which is closing stock of the previous day)
     const previousDayReport = await this.getCalculatedClosingStockUpToDate(yesterdayFormatted);
 
     for (const item of allItems) {
@@ -186,7 +244,6 @@ class DataService {
       let stockIn = 0;
       let stockOut = 0;
 
-      // Filter transactions for the report date
       const transactionsOnDay = this.dataStore.transactions.filter(
         t => t.date === reportDate && t.itemId === item.id
       );
@@ -214,16 +271,11 @@ class DataService {
     return dailyReport;
   }
 
-  /**
-   * Calculates the theoretical closing stock for each item up to a specific date (inclusive).
-   * This is used to determine the "opening stock" for the subsequent day.
-   */
   private async getCalculatedClosingStockUpToDate(dateString: string): Promise<Map<string, number>> {
     const calculatedStocks = new Map<string, number>();
     const allItems = await this.getItems();
-    allItems.forEach(item => calculatedStocks.set(item.id, item.openingStock)); // Initialize with item's base opening stock
+    allItems.forEach(item => calculatedStocks.set(item.id, item.openingStock));
 
-    // Filter all transactions that happened on or before the given date
     const relevantTransactions = this.dataStore.transactions.filter(
       t => new Date(t.date).getTime() <= parseDate(dateString).getTime()
     );
@@ -232,16 +284,13 @@ class DataService {
       const currentStock = calculatedStocks.get(transaction.itemId) || 0;
       if (transaction.type === TransactionType.STOCK_IN) {
         calculatedStocks.set(transaction.itemId, currentStock + transaction.quantity);
-      } else { // STOCK_OUT
+      } else {
         calculatedStocks.set(transaction.itemId, currentStock - transaction.quantity);
       }
     }
     return calculatedStocks;
   }
 
-  /**
-   * Gets the current overall stock summary for the dashboard.
-   */
   async getStockSummary(): Promise<{ totalItems: number; totalVehicles: number; totalStockQuantity: number }> {
     const items = await this.getItems();
     const vehicles = await this.getVehicles();
@@ -253,10 +302,20 @@ class DataService {
       totalStockQuantity,
     };
   }
+  
+  async getInventoryValuation(): Promise<InventoryValuationEntry[]> {
+    const items = await this.getItems();
+    const valuation: InventoryValuationEntry[] = items.map(item => ({
+      itemId: item.id,
+      itemName: item.name,
+      category: item.category,
+      currentStock: item.currentStock,
+      rate: item.rate,
+      totalValue: item.currentStock * item.rate,
+    }));
+    return valuation.sort((a, b) => b.totalValue - a.totalValue);
+  }
 
-  /**
-   * Gets items that are below their low stock threshold.
-   */
   async getLowStockItems(): Promise<LowStockAlert[]> {
     const items = await this.getItems();
     const alerts: LowStockAlert[] = [];
@@ -273,13 +332,17 @@ class DataService {
     return alerts;
   }
 
-  // Seed initial data for demonstration
   async seedData(): Promise<void> {
-    if (this.dataStore.items.size === 0 && this.dataStore.vehicles.size === 0 && this.dataStore.transactions.length === 0) {
+    if (this.dataStore.items.size === 0 && this.dataStore.vehicles.size === 0 && this.dataStore.transactions.length === 0 && this.dataStore.categories.size === 0) {
       console.log('Seeding initial data...');
-      const item1: Item = { id: this.generateId(), name: 'Laptop Pro X', description: 'High-performance laptop', sku: 'LAPX-001', category: ItemCategory.ELECTRONICS, rate: 1200, openingStock: 10, currentStock: 10, lowStockThreshold: 5 };
-      const item2: Item = { id: this.generateId(), name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', sku: 'MOU-002', category: ItemCategory.ACCESSORIES, rate: 25, openingStock: 50, currentStock: 50, lowStockThreshold: 10 };
-      const item3: Item = { id: this.generateId(), name: 'USB-C Hub', description: '7-in-1 USB-C Hub', sku: 'HUB-003', category: ItemCategory.ACCESSORIES, rate: 45, openingStock: 30, currentStock: 30, lowStockThreshold: 15 };
+      
+      const cat1: Category = await this.addCategory({ name: 'Electronics' });
+      const cat2: Category = await this.addCategory({ name: 'Accessories' });
+      await this.addCategory({ name: 'General Merchandise' });
+
+      const item1: Item = { id: this.generateId(), name: 'Laptop Pro X', description: 'High-performance laptop', sku: 'LAPX-001', category: cat1.name, rate: 1200, openingStock: 10, currentStock: 10, lowStockThreshold: 5 };
+      const item2: Item = { id: this.generateId(), name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', sku: 'MOU-002', category: cat2.name, rate: 25, openingStock: 50, currentStock: 50, lowStockThreshold: 10 };
+      const item3: Item = { id: this.generateId(), name: 'USB-C Hub', description: '7-in-1 USB-C Hub', sku: 'HUB-003', category: cat2.name, rate: 45, openingStock: 30, currentStock: 30, lowStockThreshold: 15 };
 
       this.dataStore.items.set(item1.id, item1);
       this.dataStore.items.set(item2.id, item2);
@@ -294,7 +357,6 @@ class DataService {
       const today = formatDate(new Date());
       const yesterday = formatDate(getPreviousDay(new Date()));
 
-      // Initial stock-in for Laptop Pro X (yesterday) - This will be added to the opening stock of 10
       await this.addTransaction({
         date: yesterday,
         itemId: item1.id,
@@ -305,7 +367,6 @@ class DataService {
         vehicleName: vehicle1.name,
       });
 
-      // Stock-in for Wireless Mouse (today)
       await this.addTransaction({
         date: today,
         itemId: item2.id,
@@ -316,7 +377,6 @@ class DataService {
         vehicleName: vehicle1.name,
       });
 
-      // Stock-out for Laptop Pro X (today)
       await this.addTransaction({
         date: today,
         itemId: item1.id,
@@ -327,7 +387,6 @@ class DataService {
         vehicleName: vehicle2.name,
       });
 
-       // Another stock-in for USB-C Hub (today)
        await this.addTransaction({
         date: today,
         itemId: item3.id,
