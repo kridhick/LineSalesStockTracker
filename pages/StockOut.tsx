@@ -160,7 +160,12 @@ export const StockOut: React.FC = () => {
       await fetchData();
     } catch (error) {
       console.error('Failed to record stock out transaction:', error);
-      addToast('Failed to record one or more transactions.', 'error');
+      // Fix: Display the specific error message from the caught error by checking if it's an instance of Error.
+      if (error instanceof Error) {
+        addToast(error.message || 'Failed to record one or more transactions.', 'error');
+      } else {
+        addToast('Failed to record one or more transactions.', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }

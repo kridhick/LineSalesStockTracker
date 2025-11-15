@@ -29,10 +29,12 @@ export const Dashboard: React.FC = () => {
       const alerts = await dataService.getLowStockItems();
       setLowStockAlerts(alerts);
 
-      // Fetch all transactions, then filter for the last 5 relevant ones
-      const allTransactions = await dataService.getTransactions();
-      const sortedTransactions = [...allTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setRecentTransactions(sortedTransactions.slice(0, 5)); // Show up to 5 most recent transactions
+      // Fetch only the 5 most recent transactions for better performance
+      const transactions = await dataService.getTransactions({
+        orderBy: { field: 'date', direction: 'desc' },
+        limit: 5,
+      });
+      setRecentTransactions(transactions);
 
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

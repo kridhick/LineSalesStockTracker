@@ -1,6 +1,6 @@
 // components/Login.tsx
 import React from 'react';
-import { APP_NAME } from '../constants.js';
+import { APP_NAME } from '../constants';
 
 export const Login: React.FC = () => {
   return (
@@ -11,7 +11,7 @@ export const Login: React.FC = () => {
           Sign in to manage your inventory.
         </p>
         
-        {/* The Google Sign-In button will be rendered here by the GSI library */}
+        {/* Google Sign-In is initialized in App.tsx and renders the button here. */}
         <div id="signInDiv" className="flex justify-center"></div>
 
         <p className="mt-8 text-xs text-slate-400">

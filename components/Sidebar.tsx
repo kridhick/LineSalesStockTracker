@@ -1,7 +1,7 @@
 // components/Sidebar.tsx
 import React from 'react';
-import { NAVIGATION_ITEMS } from '../constants.js'; // Updated import path
-import { Page } from '../types'; // Keep Page for currentPage and onNavigate types
+import { NAVIGATION_ITEMS } from '../constants';
+import { Page } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -32,11 +32,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, c
         </div>
         <nav className="flex-1 overflow-y-auto p-4">
           <ul>
-            {NAVIGATION_ITEMS.map((item) => ( // Removed explicit type annotation here
+            {NAVIGATION_ITEMS.map((item) => (
               <li key={item.path} className="mb-2">
                 <button
                   onClick={() => {
-                    onNavigate(item.path as Page); // Cast item.path to Page enum
+                    onNavigate(item.path);
                     onClose(); // Close sidebar on mobile after navigation
                   }}
                   className={`flex items-center w-full px-4 py-2 rounded-md transition duration-200 ease-in-out

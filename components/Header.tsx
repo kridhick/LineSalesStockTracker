@@ -1,6 +1,6 @@
 // components/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { APP_NAME } from '../constants.js';
+import { APP_NAME } from '../constants';
 import { Theme, User } from '../types';
 
 interface HeaderProps {

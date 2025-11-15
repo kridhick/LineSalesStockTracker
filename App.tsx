@@ -32,8 +32,15 @@ function decodeJwtResponse(token: string) {
   return JSON.parse(jsonPayload);
 }
 
-// TODO: Replace with your actual Google Client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+// --- IMPORTANT ---
+// 1. REPLACE 'YOUR_GOOGLE_CLIENT_ID_HERE' with your actual Google Client ID.
+//    - Get it from the Google Cloud Console: https://console.cloud.google.com/apis/credentials
+//    - Create an "OAuth 2.0 Client ID" for a "Web application".
+// 2. FIX FOR THE "origin is not allowed" ERROR:
+//    - In your Google Cloud credentials, you MUST add your app's URL to the "Authorized JavaScript origins".
+//    - For local development, this is often 'http://localhost:3000' or similar.
+//    - For production, it will be your live domain (e.g., 'https://your-app.com').
+const GOOGLE_CLIENT_ID = '1034244502974-gec38lsutois7alvc9qr4ad5h6vi901t.apps.googleusercontent.com';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -69,11 +76,17 @@ function App() {
   }, [addToast]);
 
   useEffect(() => {
+    if (GOOGLE_CLIENT_ID === '1034244502974-gec38lsutois7alvc9qr4ad5h6vi901t.apps.googleusercontent.com') {
+      // Don't initialize if the placeholder is still there.
+      return;
+    }
+    
     // Initialize Google Sign-In
     if (window.google?.accounts?.id) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
+        use_fedcm_for_prompt: false, // Prevent FedCM error
       });
 
       // Render the button in the Login component if the element exists
@@ -135,6 +148,28 @@ function App() {
       default: return <Dashboard />;
     }
   };
+  
+  if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-100 text-slate-800 p-8">
+        <div className="text-center max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Configuration Required</h1>
+          <p className="mb-4 text-slate-600">
+            To enable Google Sign-In, you need to provide your own Google Client ID.
+          </p>
+          <div className="text-left bg-slate-50 p-4 rounded-md text-sm border border-slate-200">
+            <p className="font-semibold mb-2">Please follow these steps:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>Open the <strong>App.tsx</strong> file in your editor.</li>
+              <li>Find the <code>GOOGLE_CLIENT_ID</code> constant.</li>
+              <li>Replace the placeholder <code>'YOUR_GOOGLE_CLIENT_ID_HERE'</code> with your actual Client ID.</li>
+              <li>Make sure to follow the instructions in the comments to add your app's URL (origin) to the Google Cloud Console to prevent authorization errors.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
