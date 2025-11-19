@@ -67,7 +67,7 @@ export const Reports: React.FC = () => {
         const title = 'Inventory Valuation Summary';
         doc.text(title, 14, 15);
         (doc as any).autoTable({
-          head: [['Item Name', 'Category', 'Current Stock', 'Rate ($)', 'Total Value ($)']],
+          head: [['Item Name', 'Category', 'Current Stock', 'Rate (₹)', 'Total Value (₹)']],
           body: valuationData.map(row => [row.itemName, row.category, row.currentStock, row.rate.toFixed(2), row.totalValue.toFixed(2)]),
           startY: 20,
         });
@@ -75,7 +75,7 @@ export const Reports: React.FC = () => {
         const totalValue = valuationData.reduce((sum, item) => sum + item.totalValue, 0);
         const finalY = (doc as any).lastAutoTable.finalY;
         doc.setFont('helvetica', 'bold');
-        doc.text(`Total Inventory Value: $${totalValue.toFixed(2)}`, 14, finalY + 10);
+        doc.text(`Total Inventory Value: ₹${totalValue.toFixed(2)}`, 14, finalY + 10);
       }
       
       doc.save(`${activeTab}_report_${formatDate(new Date())}.pdf`);
@@ -111,8 +111,8 @@ export const Reports: React.FC = () => {
     { key: 'itemName', header: 'Item Name' },
     { key: 'category', header: 'Category' },
     { key: 'currentStock', header: 'Current Stock' },
-    { key: 'rate', header: 'Rate', render: (item) => `$${item.rate.toFixed(2)}` },
-    { key: 'totalValue', header: 'Total Value', render: (item) => `$${item.totalValue.toFixed(2)}`, className: 'font-bold' },
+    { key: 'rate', header: 'Rate', render: (item) => `₹${item.rate.toFixed(2)}` },
+    { key: 'totalValue', header: 'Total Value', render: (item) => `₹${item.totalValue.toFixed(2)}`, className: 'font-bold' },
   ];
 
   return (
@@ -198,7 +198,7 @@ export const Reports: React.FC = () => {
                 />
                 <div className="text-right mt-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                   <span className="text-lg font-bold text-textPrimary dark:text-slate-200">
-                    Total Inventory Value: ${totalInventoryValue.toFixed(2)}
+                    Total Inventory Value: ₹{totalInventoryValue.toFixed(2)}
                   </span>
                 </div>
               </>

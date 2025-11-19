@@ -169,7 +169,7 @@ export const ItemMaster: React.FC = () => {
     { 
       key: 'rate', 
       header: 'Rate', 
-      render: (item: Item) => `$${item.rate.toFixed(2)}`
+      render: (item: Item) => `₹${item.rate.toFixed(2)}`
     },
     { key: 'openingStock', header: 'Opening Stock' },
     { key: 'currentStock', header: 'Current Stock', className: 'font-bold' },
@@ -248,12 +248,12 @@ export const ItemMaster: React.FC = () => {
             />
             <Input
               id="rate"
-              label="Rate ($)"
+              label="Rate (₹)"
               type="number"
               value={form.rate === 0 ? '' : form.rate}
               onChange={handleInputChange}
               error={formErrors.rate}
-              placeholder="e.g., 1200.00"
+              placeholder="e.g., 99999.00"
               step="0.01"
               min="0.01"
             />
@@ -264,8 +264,9 @@ export const ItemMaster: React.FC = () => {
               value={form.openingStock === 0 ? '' : form.openingStock}
               onChange={handleInputChange}
               error={formErrors.openingStock}
-              placeholder="e.g., 50"
+              placeholder="e.g., 50.5"
               min="0"
+              step="0.01"
             />
              <Input
               id="lowStockThreshold"
@@ -274,8 +275,9 @@ export const ItemMaster: React.FC = () => {
               value={form.lowStockThreshold === 0 ? '' : form.lowStockThreshold}
               onChange={handleInputChange}
               error={formErrors.lowStockThreshold}
-              placeholder="e.g., 10"
+              placeholder="e.g., 10.5"
               min="0"
+              step="0.01"
             />
           </div>
          

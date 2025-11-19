@@ -78,7 +78,7 @@ export const StockOut: React.FC = () => {
     const { id, value } = e.target;
     setCurrentItem(prev => ({
       ...prev,
-      [id]: id === 'quantity' ? parseInt(value, 10) || 0 : value,
+      [id]: id === 'quantity' ? parseFloat(value) || 0 : value,
     }));
     setFormErrors(prev => ({ ...prev, quantity: '', itemId: '' })); // Clear errors on change
   };
@@ -204,7 +204,7 @@ export const StockOut: React.FC = () => {
               <Select id="itemId" label="Select Item" options={items.map(i => ({ value: i.id, label: `${i.name} (Stock: ${i.currentStock})` }))} value={currentItem.itemId} onChange={handleCurrentItemChange} error={formErrors.itemId} />
             </div>
             <div>
-              <Input id="quantity" label="Quantity" type="number" min="1" value={currentItem.quantity === 0 ? '' : currentItem.quantity} onChange={handleCurrentItemChange} error={formErrors.quantity} />
+              <Input id="quantity" label="Quantity" type="number" min="0.01" step="0.01" value={currentItem.quantity === 0 ? '' : currentItem.quantity} onChange={handleCurrentItemChange} error={formErrors.quantity} />
             </div>
           </div>
           <div className="flex justify-end mt-4">
