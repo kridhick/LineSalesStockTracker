@@ -1,89 +1,41 @@
-import React, { useState } from 'react';
+// components/Login.tsx
+import React from 'react';
 import { APP_NAME } from '../constants';
 import { supabase } from '../services/supabase';
+import { Button } from './Button';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errMsg, setErrMsg] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrMsg('');
-    setIsLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setErrMsg(error.message);
-    setIsLoading(false);
-  };
-
   const handleGoogleSignIn = async () => {
-    setErrMsg('');
-    setIsLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) setErrMsg(error.message);
-    setIsLoading(false);
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrMsg('');
-    setIsLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setErrMsg(error.message);
-    setIsLoading(false);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href,
+      },
+    });
+    if (error) {
+      console.error("Google Sign-In Error", error);
+      // Optionally, show a toast message to the user
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm mx-auto text-center">
         <h1 className="text-4xl font-bold text-primary mb-2">{APP_NAME}</h1>
-        <p className="text-lg text-textSecondary dark:text-slate-400 mb-8">Sign in to manage your inventory.</p>
-        <form className="space-y-4" onSubmit={handleEmailSignIn}>
-          <input
-            type="email"
-            required
-            placeholder="Email"
-            className="input bg-white dark:bg-slate-800 border p-2 w-full"
-            value={email}
-            autoComplete="username"
-            onChange={e => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            required
-            placeholder="Password"
-            className="input bg-white dark:bg-slate-800 border p-2 w-full"
-            value={password}
-            autoComplete="current-password"
-            onChange={e => setPassword(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="bg-primary text-white px-4 py-2 rounded w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign in with Email'}
-          </button>
-        </form>
-        <form className="space-y-4 mt-3" onSubmit={handleSignUp}>
-          <button
-            type="submit"
-            className="bg-secondary text-white px-4 py-2 rounded w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Registering...' : 'Sign up (create account)'}
-          </button>
-        </form>
-        <div className="my-3 text-xs text-slate-400">or</div>
-        <button
-          className="bg-red-600 text-white px-4 py-2 rounded w-full"
-          disabled={isLoading}
-          onClick={handleGoogleSignIn}
-        >
+        <p className="text-lg text-textSecondary dark:text-slate-400 mb-8">
+          Sign in to manage your inventory.
+        </p>
+        
+        <Button onClick={handleGoogleSignIn} size="lg" variant="outline" className="w-full flex items-center justify-center">
+          <svg className="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px">
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.223,0-9.651-3.358-11.297-7.962l-6.571,4.819C9.656,39.663,16.318,44,24,44z" />
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C39.99,36.566,44,30.836,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
+          </svg>
           Sign in with Google
-        </button>
-        {errMsg && <p className="mt-4 text-red-600 text-xs">{errMsg}</p>}
+        </Button>
+
         <p className="mt-8 text-xs text-slate-400">
           By signing in, you agree to our terms of service.
         </p>

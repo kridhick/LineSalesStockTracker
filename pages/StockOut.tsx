@@ -160,9 +160,10 @@ export const StockOut: React.FC = () => {
       await fetchData();
     } catch (error) {
       console.error('Failed to record stock out transaction:', error);
-      // Fix: Display the specific error message from the caught error by checking if it's an instance of Error.
+      // FIX: The caught error is of type 'unknown'. This ensures that we safely access
+      // the 'message' property only if it's an Error instance, preventing a type error.
       if (error instanceof Error) {
-        addToast(error.message || 'Failed to record one or more transactions.', 'error');
+        addToast(error.message, 'error');
       } else {
         addToast('Failed to record one or more transactions.', 'error');
       }
