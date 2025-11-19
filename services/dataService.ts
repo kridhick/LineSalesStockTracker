@@ -1,176 +1,192 @@
 // services/dataService.ts
+import { supabase } from './supabase';
 import { Item, Vehicle, Transaction, DailyStockReportEntry, Category, LowStockAlert, InventoryValuationEntry, TransactionType } from '../types';
 
-// In-memory database
-let items: Item[] = [];
-let vehicles: Vehicle[] = [];
-let categories: Category[] = [];
-let transactions: Transaction[] = [];
-let seeded = false;
-
-// Helper to simulate async operations
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+// Helper to handle Supabase errors
+const handleSupabaseError = (error: any, context: string) => {
+  if (error) {
+    console.error(`Supabase error in ${context}:`, error);
+    throw new Error(`A database error occurred: ${error.message}`);
+  }
+};
 
 class DataService {
 
   // Item Master CRUD
   async getItems(): Promise<Item[]> {
-    await delay(100);
-    return JSON.parse(JSON.stringify(items));
+    const { data, error } = await supabase.from('items').select('*').order('name');
+    handleSupabaseError(error, 'getItems');
+    return data || [];
   }
 
   async getItem(id: string): Promise<Item | undefined> {
-    await delay(50);
-    return JSON.parse(JSON.stringify(items.find(item => item.id === id)));
+    const { data, error } = await supabase.from('items').select('*').eq('id', id).single();
+    handleSupabaseError(error, 'getItem');
+    return data;
   }
 
   async addItem(item: Omit<Item, 'id' | 'currentStock'>): Promise<Item> {
-    await delay(150);
-    const newItem: Item = {
-      id: crypto.randomUUID(),
-      ...item,
-      currentStock: item.openingStock
-    };
-    items.push(newItem);
-    return JSON.parse(JSON.stringify(newItem));
+    const { data, error } = await supabase
+      .from('items')
+      .insert({ ...item, currentStock: item.openingStock })
+      .select()
+      .single();
+    handleSupabaseError(error, 'addItem');
+    return data;
   }
 
   async updateItem(id: string, updatedFields: Partial<Item>): Promise<Item | null> {
-    await delay(150);
-    const itemIndex = items.findIndex(item => item.id === id);
-    if (itemIndex === -1) return null;
-    items[itemIndex] = { ...items[itemIndex], ...updatedFields };
-    return JSON.parse(JSON.stringify(items[itemIndex]));
+    const { data, error } = await supabase
+      .from('items')
+      .update(updatedFields)
+      .eq('id', id)
+      .select()
+      .single();
+    handleSupabaseError(error, 'updateItem');
+    return data;
   }
 
   async deleteItem(id: string): Promise<boolean> {
-    await delay(200);
-    items = items.filter(item => item.id !== id);
-    transactions = transactions.filter(t => t.itemId !== id);
-    return true;
+    const { error } = await supabase.from('items').delete().eq('id', id);
+    handleSupabaseError(error, 'deleteItem');
+    return !error;
   }
 
   // Vehicle Master CRUD
   async getVehicles(): Promise<Vehicle[]> {
-    await delay(100);
-    return JSON.parse(JSON.stringify(vehicles));
+    const { data, error } = await supabase.from('vehicles').select('*').order('name');
+    handleSupabaseError(error, 'getVehicles');
+    return data || [];
   }
   
   async addVehicle(vehicle: Omit<Vehicle, 'id'>): Promise<Vehicle> {
-    await delay(150);
-    const newVehicle: Vehicle = { id: crypto.randomUUID(), ...vehicle };
-    vehicles.push(newVehicle);
-    return JSON.parse(JSON.stringify(newVehicle));
+    const { data, error } = await supabase.from('vehicles').insert(vehicle).select().single();
+    handleSupabaseError(error, 'addVehicle');
+    return data;
   }
 
   async updateVehicle(id: string, updatedFields: Partial<Vehicle>): Promise<Vehicle | null> {
-    await delay(150);
-    const vehicleIndex = vehicles.findIndex(v => v.id === id);
-    if (vehicleIndex === -1) return null;
-    vehicles[vehicleIndex] = { ...vehicles[vehicleIndex], ...updatedFields };
-    return JSON.parse(JSON.stringify(vehicles[vehicleIndex]));
+    const { data, error } = await supabase.from('vehicles').update(updatedFields).eq('id', id).select().single();
+    handleSupabaseError(error, 'updateVehicle');
+    return data;
   }
 
   async deleteVehicle(id: string): Promise<boolean> {
-     await delay(200);
-     vehicles = vehicles.filter(v => v.id !== id);
-     return true;
+     const { error } = await supabase.from('vehicles').delete().eq('id', id);
+     handleSupabaseError(error, 'deleteVehicle');
+     return !error;
   }
 
   // Category Master CRUD
   async getCategories(): Promise<Category[]> {
-    await delay(100);
-    return JSON.parse(JSON.stringify(categories));
+    const { data, error } = await supabase.from('categories').select('*').order('name');
+    handleSupabaseError(error, 'getCategories');
+    return data || [];
   }
 
   async addCategory(category: Omit<Category, 'id'>): Promise<Category> {
-    await delay(150);
-    if (categories.some(c => c.name.toLowerCase() === category.name.toLowerCase())) {
+    const { data, error } = await supabase.from('categories').insert(category).select().single();
+    if (error?.code === '23505') { // Handle unique constraint violation
         throw new Error(`Category "${category.name}" already exists.`);
     }
-    const newCategory: Category = { id: crypto.randomUUID(), ...category };
-    categories.push(newCategory);
-    return JSON.parse(JSON.stringify(newCategory));
+    handleSupabaseError(error, 'addCategory');
+    return data;
   }
 
   async updateCategory(id: string, updatedFields: Partial<Category>): Promise<Category | null> {
-    await delay(150);
-    const categoryIndex = categories.findIndex(c => c.id === id);
-    if (categoryIndex === -1) return null;
-    categories[categoryIndex] = { ...categories[categoryIndex], ...updatedFields };
-    return JSON.parse(JSON.stringify(categories[categoryIndex]));
+    const { data, error } = await supabase.from('categories').update(updatedFields).eq('id', id).select().single();
+    handleSupabaseError(error, 'updateCategory');
+    return data;
   }
 
   async deleteCategory(id: string): Promise<boolean> {
-    await delay(200);
-    const categoryToDelete = categories.find(c => c.id === id);
+    const { data: categoryToDelete, error: fetchError } = await supabase.from('categories').select('name').eq('id', id).single();
+    handleSupabaseError(fetchError, 'deleteCategory (fetch)');
+
     if (!categoryToDelete || categoryToDelete.name === 'General Merchandise') {
       throw new Error("This category cannot be deleted.");
     }
+    
+    // Update items to General Merchandise category
+    const { error: updateError } = await supabase.from('items').update({ category: 'General Merchandise' }).eq('category', categoryToDelete.name);
+    handleSupabaseError(updateError, 'deleteCategory (update items)');
 
-    let generalCat = categories.find(c => c.name === 'General Merchandise');
-    if (!generalCat) {
-      generalCat = await this.addCategory({ name: 'General Merchandise' });
-    }
+    // Delete the category
+    const { error: deleteError } = await supabase.from('categories').delete().eq('id', id);
+    handleSupabaseError(deleteError, 'deleteCategory (delete)');
 
-    items.forEach(item => {
-      if (item.category === categoryToDelete.name) {
-        item.category = generalCat!.name;
-      }
-    });
-
-    categories = categories.filter(c => c.id !== id);
-    return true;
+    return !deleteError;
   }
 
   // Transaction Management
   async addTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction | null> {
-    await delay(200);
-    const item = items.find(i => i.id === transaction.itemId);
-    if (!item) {
-        throw new Error("Transaction failed: Item not found.");
-    }
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('id, currentStock, name')
+      .eq('id', transaction.itemId)
+      .single();
     
-    if (transaction.type === TransactionType.STOCK_OUT && item.currentStock < transaction.quantity) {
-        throw new Error(`Not enough stock for ${item.name}. Available: ${item.currentStock}`);
+    handleSupabaseError(itemError, 'addTransaction (fetch item)');
+    if (!item) {
+      throw new Error("Transaction failed: Item not found.");
     }
 
+    let newStock = item.currentStock;
     if (transaction.type === TransactionType.STOCK_IN) {
-        item.currentStock += transaction.quantity;
+      newStock += transaction.quantity;
     } else {
-        item.currentStock -= transaction.quantity;
+      if (item.currentStock < transaction.quantity) {
+        throw new Error(`Not enough stock for ${item.name}. Available: ${item.currentStock}`);
+      }
+      newStock -= transaction.quantity;
     }
 
-    const newTransaction: Transaction = { id: crypto.randomUUID(), ...transaction };
-    transactions.push(newTransaction);
-    return JSON.parse(JSON.stringify(newTransaction));
+    // NOTE: These two operations should ideally be in a database transaction.
+    // For simplicity, we are executing them sequentially.
+    const { error: updateError } = await supabase
+      .from('items')
+      .update({ currentStock: newStock })
+      .eq('id', transaction.itemId);
+    handleSupabaseError(updateError, 'addTransaction (update stock)');
+
+    const { data: newTransaction, error: insertError } = await supabase
+      .from('transactions')
+      .insert(transaction)
+      .select()
+      .single();
+    handleSupabaseError(insertError, 'addTransaction (insert transaction)');
+    
+    return newTransaction;
   }
 
   async getTransactions(options?: { date?: string, limit?: number, orderBy?: { field: string, direction: 'asc' | 'desc' } }): Promise<Transaction[]> {
-    await delay(100);
-    let results = [...transactions];
+    let query = supabase.from('transactions').select('*');
+
     if (options?.date) {
-      results = results.filter(t => t.date === options.date);
+      query = query.eq('date', options.date);
     }
     if (options?.orderBy) {
-      results.sort((a, b) => {
-        const field = options.orderBy!.field as keyof Transaction;
-        if (a[field] < b[field]) return options.orderBy!.direction === 'asc' ? -1 : 1;
-        if (a[field] > b[field]) return options.orderBy!.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
+      query = query.order(options.orderBy.field as any, { ascending: options.orderBy.direction === 'asc' });
     }
     if (options?.limit) {
-      results = results.slice(0, options.limit);
+      query = query.limit(options.limit);
     }
-    return JSON.parse(JSON.stringify(results));
+
+    const { data, error } = await query;
+    handleSupabaseError(error, 'getTransactions');
+    return data || [];
   }
 
   // Report Generation
   async getDailyStockReport(reportDate: string): Promise<DailyStockReportEntry[]> {
-    await delay(300);
+    // FIX: The getItems method returns an array of items directly, not an object with data and error properties. Error handling is already managed within the getItems method.
     const allItems = await this.getItems();
-    const transactionsToday = transactions.filter(t => t.date === reportDate);
+
+    const { data: transactionsToday, error: transError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('date', reportDate);
+    handleSupabaseError(transError, 'getDailyStockReport (fetch transactions)');
     
     return allItems.map(item => {
         const stockIn = transactionsToday
@@ -195,17 +211,27 @@ class DataService {
   }
 
   async getStockSummary(): Promise<{ totalItems: number; totalVehicles: number; totalStockQuantity: number }> {
-    await delay(100);
-    const totalStockQuantity = items.reduce((sum, item) => sum + item.currentStock, 0);
+    const { count: totalItems, error: itemsError } = await supabase.from('items').select('*', { count: 'exact', head: true });
+    handleSupabaseError(itemsError, 'getStockSummary (count items)');
+    
+    const { count: totalVehicles, error: vehiclesError } = await supabase.from('vehicles').select('*', { count: 'exact', head: true });
+    handleSupabaseError(vehiclesError, 'getStockSummary (count vehicles)');
+
+    const { data: stockData, error: stockError } = await supabase.from('items').select('currentStock');
+    handleSupabaseError(stockError, 'getStockSummary (fetch stock)');
+    
+    const totalStockQuantity = stockData?.reduce((sum, item) => sum + item.currentStock, 0) ?? 0;
+
     return {
-        totalItems: items.length,
-        totalVehicles: vehicles.length,
+        totalItems: totalItems ?? 0,
+        totalVehicles: totalVehicles ?? 0,
         totalStockQuantity,
     };
   }
   
   async getInventoryValuation(): Promise<InventoryValuationEntry[]> {
-    await delay(100);
+    // FIX: The getItems method returns an array of items directly, not an object with data and error properties. Error handling is already managed within the getItems method.
+    const items = await this.getItems();
     return items.map(item => ({
       itemId: item.id,
       itemName: item.name,
@@ -217,9 +243,11 @@ class DataService {
   }
 
   async getLowStockItems(): Promise<LowStockAlert[]> {
-    await delay(100);
-    return items
-      .filter(item => typeof item.lowStockThreshold === 'number' && item.currentStock < item.lowStockThreshold)
+    const { data, error } = await supabase.from('items').select('*').filter('lowStockThreshold', 'isnot', null);
+    handleSupabaseError(error, 'getLowStockItems');
+
+    return (data || [])
+      .filter(item => item.currentStock < item.lowStockThreshold)
       .map(item => ({
         itemId: item.id,
         itemName: item.name,
@@ -229,34 +257,41 @@ class DataService {
   }
 
   async seedData(): Promise<void> {
-    if (seeded) {
-      console.log("Data already seeded.");
+    const { count, error } = await supabase.from('items').select('*', { count: 'exact', head: true });
+    handleSupabaseError(error, 'seedData (check)');
+    if (count !== null && count > 0) {
+      console.log("Data already exists. Skipping seed.");
       return;
     }
 
-    console.log("Seeding initial data...");
-    
-    // Clear existing data
-    items = [];
-    vehicles = [];
-    categories = [];
-    transactions = [];
+    console.log("Seeding initial data into Supabase...");
 
     // Seed Categories
-    const electronics = await this.addCategory({ name: 'Electronics' });
-    const office = await this.addCategory({ name: 'Office Supplies' });
-    await this.addCategory({ name: 'General Merchandise' });
+    const { data: categories, error: catError } = await supabase.from('categories').insert([
+        { name: 'Electronics' },
+        { name: 'Office Supplies' },
+    ]).select();
+    handleSupabaseError(catError, 'seedData (categories)');
 
     // Seed Vehicles
-    await this.addVehicle({ name: 'Delivery Van A', licensePlate: 'VAN-001', capacity: 500 });
-    await this.addVehicle({ name: 'Supply Truck B', licensePlate: 'TRK-002', capacity: 2000 });
+    const { error: vehicleError } = await supabase.from('vehicles').insert([
+      { name: 'Delivery Van A', licensePlate: 'VAN-001', capacity: 500 },
+      { name: 'Supply Truck B', licensePlate: 'TRK-002', capacity: 2000 },
+    ]);
+    handleSupabaseError(vehicleError, 'seedData (vehicles)');
 
     // Seed Items
-    await this.addItem({ name: 'Laptop Pro 15"', description: 'High-performance laptop', sku: 'LP15-001', category: electronics.name, rate: 1299.99, openingStock: 50, lowStockThreshold: 10 });
-    await this.addItem({ name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', sku: 'WM-002', category: electronics.name, rate: 25.50, openingStock: 200, lowStockThreshold: 25 });
-    await this.addItem({ name: 'A4 Paper Ream', description: '500 sheets of A4 paper', sku: 'A4-001', category: office.name, rate: 5.00, openingStock: 500, lowStockThreshold: 50 });
-    
-    seeded = true;
+    if (categories) {
+        const electronics = categories.find(c => c.name === 'Electronics');
+        const office = categories.find(c => c.name === 'Office Supplies');
+
+        const { error: itemError } = await supabase.from('items').insert([
+          { name: 'Laptop Pro 15"', description: 'High-performance laptop', sku: 'LP15-001', category: electronics?.name, rate: 1299.99, openingStock: 50, currentStock: 50, lowStockThreshold: 10 },
+          { name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', sku: 'WM-002', category: electronics?.name, rate: 25.50, openingStock: 200, currentStock: 200, lowStockThreshold: 25 },
+          { name: 'A4 Paper Ream', description: '500 sheets of A4 paper', sku: 'A4-001', category: office?.name, rate: 5.00, openingStock: 500, currentStock: 500, lowStockThreshold: 50 },
+        ]);
+        handleSupabaseError(itemError, 'seedData (items)');
+    }
   }
 }
 
